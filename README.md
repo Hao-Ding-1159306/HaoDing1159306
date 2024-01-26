@@ -59,7 +59,7 @@ INSERT INTO part (`part_name`, `cost`) VALUES ('Hub Cap', '22.89');
    routes? As part of your answer, give two specific examples of problems that could occur if all of the web app
    facilities were available to everyone.
 
-- **A:** Different people often have different responsibilities and authorities. We cannot allow people to do things
+- **A:** Different people often have different responsibilities and authorities. We cannot allow people to do something
   beyond their authority.
 
   For example, if a technician can mark an order as paid, he can earn

@@ -31,12 +31,19 @@ def home():
 
 
 @app.route("/currentjobs")
-def currentjobs():
+def current_jobs():
     cursor = getCursor()
-    cursor.execute("SELECT job_id,customer,job_date FROM job where completed=0;")
+
+    query = """
+        SELECT j.job_id, IFNULL(CONCAT(c.first_name, ' ', c.family_name), c.family_name) AS full_name, j.job_date
+        FROM job j
+        INNER JOIN customer c ON j.customer = c.customer_id
+        WHERE j.completed = 0
+    """
+    cursor.execute(query)
     jobList = cursor.fetchall()
     return render_template("currentjoblist.html", job_list=jobList)
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=5000, debug=True)
