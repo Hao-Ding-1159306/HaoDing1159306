@@ -31,7 +31,7 @@ def home():
 
 
 @app.route("/currentjobs")
-def current_jobs():
+def currentjobs():
     cursor = getCursor()
 
     query = """
@@ -43,6 +43,28 @@ def current_jobs():
     cursor.execute(query)
     jobList = cursor.fetchall()
     return render_template("currentjoblist.html", job_list=jobList)
+
+
+@app.route("/administrator")
+def administrator():
+    return render_template("administrator.html")
+
+
+@app.route("/administrator/customer")
+def customer():
+    return render_template("customer.html")
+
+@app.route("/administrator/service")
+def service():
+    return render_template("service.html")
+
+@app.route("/administrator/part")
+def part():
+    return render_template("part.html")
+
+@app.route("/administrator/billinghistory")
+def billinghistory():
+    return render_template("billinghistory.html")
 
 
 if __name__ == '__main__':
