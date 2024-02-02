@@ -50,17 +50,39 @@ def administrator():
     return render_template("administrator.html")
 
 
-@app.route("/administrator/customer")
+@app.route("/administrator/customer", methods=['GET'])
 def customer():
-    return render_template("customer.html")
+    # 获取搜索关键字
+    search_value = request.args.get('search')
+    print(f'search_value: {search_value}')
+    cursor = getCursor()
+    if search_value is not None:
+        query = """
+            SELECT * FROM customer WHERE family_name LIKE %s OR first_name LIKE %s
+            ORDER BY family_name, first_name;
+        """
+        params = (f'%{search_value}%', f'%{search_value}%')
+        cursor.execute(query, params)
+    else:
+
+        query = """
+                SELECT * FROM customer
+                ORDER BY family_name, first_name;
+        """
+        cursor.execute(query)
+    customer_list = cursor.fetchall()
+    return render_template("customer.html", customer_list=customer_list)
+
 
 @app.route("/administrator/service")
 def service():
     return render_template("service.html")
 
+
 @app.route("/administrator/part")
 def part():
     return render_template("part.html")
+
 
 @app.route("/administrator/billinghistory")
 def billinghistory():

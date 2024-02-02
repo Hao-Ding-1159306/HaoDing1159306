@@ -1,2 +1,55 @@
 {% extends "administrator.html" %}
 {% block title %}Customer{% endblock %}
+
+{% block content %}
+<style>
+    .table-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-top: 20px;
+    }
+    .search-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-bottom: 40px;
+    }
+
+
+</style>
+
+
+<h2>Customer List</h2>
+<!-- code to display search box-->
+<div class="container">
+    <form action="/administrator/customer" method="GET">
+        <div class="row search-container">
+            <div class="col-md-10">
+                <input type="text" name="search" class="form-control" placeholder="Name">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="table-container">
+    <!-- code to display list of customer-->
+    <table class="table">
+        <tr>
+            <th>Customer ID</th>
+            <th>First Name</th>
+            <th>Family Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+        </tr>
+        {% for customer in customer_list %}
+        <tr>
+            {% for field in customer %}
+            <td>{% if field is none %}&nbsp;{% else %}{{ field }}{% endif %}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
