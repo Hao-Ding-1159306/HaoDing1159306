@@ -52,7 +52,6 @@ def administrator():
 
 @app.route("/administrator/customer", methods=['GET'])
 def customer():
-    # 获取搜索关键字
     search_value = request.args.get('search')
     print(f'search_value: {search_value}')
     cursor = getCursor()
@@ -79,10 +78,58 @@ def service():
     return render_template("service.html")
 
 
-@app.route("/administrator/part")
-def part():
-    return render_template("part.html")
+@app.route("/administrator/part", methods=['GET'])
+def part(per_page=5):
+    page = int(request.args.get('page', 1))
+    search_value = request.args.get('search', '').strip()
 
+    cursor = getCursor()
+    total_count, results = get_part_results(cursor, page, search_value, per_page)
+    total_pages = (total_count + per_page - 1) // per_page
+    return render_template("part.html", results=results, page=page, total_pages=total_pages, search_value=search_value)
+
+
+def get_part_results(cursor, page, search_value, per_page):
+    offset = (page - 1) * per_page
+    query = "SELECT * FROM part"
+    params = ()
+    if search_value:
+        query += " WHERE part_name LIKE %s"
+        params = (f'%{search_value}%',)
+    cursor.execute(query, params)
+    results = cursor.fetchall()
+    results = [{'part_id': row[0], 'part_name': row[1], 'cost': row[2]} for row in results]
+    total_count = cursor.rowcount
+    results = results[offset:offset + per_page]
+    cursor.close()
+
+    return total_count, results
+
+@app.route('/administrator/part/add', methods=['GET', 'POST'])
+def add_part():
+    if request.method == 'POST':
+        # get from data
+        name = request.form['name']
+        cost = request.form['cost']
+
+        if not name or not name.isalpha():
+            error_msg = 'Invalid name. Name must be a string and should not contain symbols.'
+            return render_template('addpart.html', error_msg=error_msg)
+
+        try:
+            cost = float(cost)
+        except ValueError:
+            error_msg = 'Invalid cost. Cost must be a number.'
+            return render_template('addpart.html', error_msg=error_msg)
+
+        # insert new part info in to database
+        cursor = getCursor()
+        cursor.execute("INSERT INTO part (part_name, cost) VALUES (%s, %s)", (name, cost))
+        cursor.close()
+
+        return redirect('/administrator/part')
+
+    return render_template('addpart.html')
 
 @app.route("/administrator/billinghistory")
 def billinghistory():
