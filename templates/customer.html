@@ -2,6 +2,7 @@
 {% block title %}Customer{% endblock %}
 
 {% block content %}
+
 <style>
     .table-container {
     max-width: 1200px;
@@ -11,14 +12,13 @@
     .search-container {
     max-width: 1200px;
     margin: 0 auto;
+    margin-top: 30px;
     margin-bottom: 40px;
     }
 </style>
 
-
-<h2>Customer List</h2>
-<!-- code to display search box-->
 <div class="container">
+    <h2>Customer List</h2>
     <form action="/administrator/customer" method="GET">
         <div class="row search-container">
             <div class="col-md-10">

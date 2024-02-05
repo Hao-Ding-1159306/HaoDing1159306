@@ -11,13 +11,13 @@
     .search-container {
     max-width: 1200px;
     margin: 0 auto;
+    margin-top: 30px;
     margin-bottom: 40px;
     }
 </style>
-<h2>Part List</h2>
 
-<!-- code to display search box-->
 <div class="container">
+    <h2>Part List</h2>
     <form action="/administrator/part" method="GET">
         <div class="row search-container">
             <div class="col-md-6">
@@ -37,8 +37,6 @@
         </div>
     </form>
 </div>
-
-
 
 <div class="table-container">
     {% if results %}
@@ -89,6 +87,5 @@
     <p>No results found.</p>
     {% endif %}
 </div>
-
 
 {% endblock %}
