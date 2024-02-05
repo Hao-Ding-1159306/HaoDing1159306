@@ -19,21 +19,31 @@
 
 <div class="container">
     <h2>Customer List</h2>
-    <form action="/administrator/customer" method="GET">
+
+    <form action="/administrator/part" method="GET">
         <div class="row search-container">
-            <div class="col-md-10">
-                <input type="text" name="search" class="form-control" placeholder="Name">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search"
+                             viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"></path>
+                        </svg>
+                    </span>
+                    <input type="text" name="search" class="form-control" placeholder="Customer Name">
+                </div>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">Search</button>
+            <div class="col-md-6">
+                <a class="btn btn-primary" href="/administrator/customer/add">Add Customer</a>
             </div>
         </div>
     </form>
 </div>
 
 <div class="table-container">
-    <!-- code to display list of customer-->
+    {% if results %}
     <table class="table">
+        <thead>
         <tr>
             <th>Customer ID</th>
             <th>First Name</th>
@@ -41,13 +51,47 @@
             <th>Email</th>
             <th>Phone</th>
         </tr>
-        {% for customer in customer_list %}
+        </thead>
+        <tbody>
+        {% for result in results %}
         <tr>
-            {% for field in customer %}
-            <td>{% if field is none %}&nbsp;{% else %}{{ field }}{% endif %}</td>
-            {% endfor %}
+            <td>{{ result.customer_id }}</td>
+            <td>{% if result.first_name is none %}&nbsp;{% else %}{{ result.first_name }}{% endif %}</td>
+            <td>{{ result.family_name }}</td>
+            <td>{{ result.email }}</td>
+            <td>{{ result.phone }}</td>
         </tr>
         {% endfor %}
+        </tbody>
     </table>
+
+    {% if total_pages > 1 %}
+    <nav>
+        <ul class="pagination">
+            {% if page > 1 %}
+            <li class="page-item"><a class="page-link"
+                                     href="?page={{ page - 1 }}&search={{ search_value }}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active"><a class="page-link" href="#">{{ p }}</a></li>
+            {% else %}
+            <li class="page-item"><a class="page-link" href="?page={{ p }}&search={{ search_value }}">{{ p }}</a></li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <li class="page-item"><a class="page-link" href="?page={{ page + 1 }}&search={{search_value }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <p>No results found.</p>
+    {% endif %}
 </div>
+
 {% endblock %}
