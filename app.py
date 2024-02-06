@@ -249,6 +249,9 @@ def add_part():
 
     return render_template('addpart.html')
 
+@app.route("/administrator/unpaidbills")
+def unpaidbills():
+    return render_template("unpaidbills.html")
 
 @app.route("/administrator/billinghistory")
 def billinghistory():
