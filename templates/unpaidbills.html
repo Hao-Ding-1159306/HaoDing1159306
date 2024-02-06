@@ -1,0 +1,77 @@
+{% extends "administrator.html" %}
+{% block title %}Unpaid Bills{% endblock %}
+
+{% block content %}
+
+<style>
+    .table-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-top: 20px;
+    }
+    .search-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    margin-top: 30px;
+    margin-bottom: 40px;
+    }
+
+
+
+
+
+</style>
+
+<div class="container">
+    <h2>Unpaid Bills</h2>
+    <hr>
+    <form action="/filter_bills" method="POST">
+        <div class="row search-container">
+            <div class="col-md-6">
+            <div class="form-group">
+                <select class="form-control" name="customer">
+                    <option value="">All Customers</option>
+                    <option value="Customer 1">Customer 1</option>
+                    <option value="Customer 2">Customer 2</option>
+                    <option value="Customer 3">Customer 3</option>
+                    <!-- Add more options as needed -->
+                </select>
+            </div>
+            </div>
+            <div class="col-md-6">
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="table-container">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Bill ID</th>
+                <th>Customer</th>
+                <th>Job Date</th>
+                <th>Cost</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for bill in unpaid_bills %}
+            <tr>
+                <td>{{ bill[0] }}</td>
+                <td>{{ bill[1] }}</td>
+                <td>{{ bill[2] }}</td>
+                <td>{{ bill[3] }}</td>
+                <td>
+                    <form action="/mark_paid" method="POST">
+                        <input type="hidden" name="bill_id" value="{{ bill[0] }}">
+                        <button type="submit" class="btn btn-primary">Mark Paid</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
