@@ -49,7 +49,7 @@ def administrator():
     return render_template("administrator.html")
 
 
-@app.route("/administrator/customer", methods=['GET'])
+@app.route("/administrator/customer", methods=['GET', 'POST'])
 def customer(per_page=10):
     page = int(request.args.get('page', 1))
     search_value = request.args.get('search', '').strip()
@@ -121,6 +121,26 @@ def add_customer():
     return render_template('addcustomer.html')
 
 
+@app.route('/administrator/customer/create_job/<int:customer_id>', methods=['GET', 'POST'])
+def create_job(customer_id):
+    family_name = request.args.get('family_name')
+    if request.method == 'POST':
+        job_date = request.form['job_date']
+        date_format = "%Y-%m-%d"
+        job_date = datetime.strptime(job_date, date_format).date()
+        today = datetime.today().date()
+        print(job_date, today)
+        if job_date < today:
+            error_msg = 'The date must be today or in the future.'
+            return render_template('create_job.html', customer_id=customer_id, family_name=family_name,
+                                   error_msg=error_msg)
+        cursor = getCursor()
+        cursor.execute("INSERT INTO job (`job_date`, `customer`) VALUES (%s, %s)", (job_date, customer_id))
+        cursor.close()
+        return redirect('/administrator/customer')
+    return render_template('create_job.html', customer_id=customer_id, family_name=family_name)
+
+
 @app.route("/administrator/service")
 def service(per_page=5):
     page = int(request.args.get('page', 1))
@@ -129,7 +149,10 @@ def service(per_page=5):
     cursor = getCursor()
     total_count, results = get_service_results(cursor, page, search_value, per_page)
     total_pages = (total_count + per_page - 1) // per_page
-    return render_template("service.html", results=results, page=page, total_pages=total_pages, search_value=search_value)
+    return render_template("service.html", results=results, page=page, total_pages=total_pages,
+                           search_value=search_value)
+
+
 def get_service_results(cursor, page, search_value, per_page):
     offset = (page - 1) * per_page
     query = "SELECT * FROM service"
@@ -144,6 +167,7 @@ def get_service_results(cursor, page, search_value, per_page):
     results = results[offset:offset + per_page]
     cursor.close()
     return total_count, results
+
 
 @app.route('/administrator/service/add', methods=['GET', 'POST'])
 def add_service():
@@ -170,6 +194,7 @@ def add_service():
         return redirect('/administrator/service')
 
     return render_template('addservice.html')
+
 
 @app.route("/administrator/part", methods=['GET'])
 def part(per_page=10):
