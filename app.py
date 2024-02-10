@@ -39,9 +39,129 @@ def currentjobs():
         WHERE j.completed = 0
     """
     cursor.execute(query)
-    jobList = cursor.fetchall()
+    results = cursor.fetchall()
+    results = [{'job_id': row[0], 'full_name': row[1], 'job_date': row[2]} for row in results]
+    print(results)
     cursor.close()
-    return render_template("currentjoblist.html", job_list=jobList)
+    return render_template("currentjoblist.html", results=results)
+
+def search_part_service(job_id):
+    part_query = """
+                        SELECT 
+                            p.part_id,
+                            p.part_name,
+                            p.cost,
+                            COALESCE(jp.qty, 0) AS qty
+                        FROM
+                            part p
+                        LEFT JOIN
+                            job_part jp ON p.part_id = jp.part_id AND jp.job_id = %s;
+                     """
+    cursor = getCursor()
+    cursor.execute(part_query, (job_id,))
+    part_results = cursor.fetchall()
+    cursor.close()
+    print('part_results', part_results)
+    part_results = [{'part_id': row[0], 'part_name': row[1], 'cost': row[2], 'qty': row[3]} for row in part_results]
+
+    service_query = """
+                            SELECT 
+                                s.service_id,
+                                s.service_name,
+                                s.cost,
+                                COALESCE(js.qty, 0) AS qty
+                            FROM
+                                service s
+                            LEFT JOIN
+                                job_service js ON s.service_id = js.service_id AND js.job_id = %s;
+                        """
+    cursor = getCursor()
+    cursor.execute(service_query, (job_id,))
+    service_results = cursor.fetchall()
+    cursor.close()
+    print('service_results', service_results)
+    service_results = [{'service_id': row[0], 'service_name': row[1], 'cost': row[2], 'qty': row[3]} for row in service_results]
+
+    return part_results, service_results
+
+
+@app.route('/job/<int:job_id>', methods=['GET', 'POST'])
+def job(job_id):
+    part_results, service_results = search_part_service(job_id)
+    if request.method == 'POST':
+        part_ids = request.form.getlist('part_id[]')
+        part_quantities = request.form.getlist('part_qty[]')
+        service_ids = request.form.getlist('service_id[]')
+        service_quantities = request.form.getlist('service_qty[]')
+        print('\n',part_ids,part_quantities,service_ids,service_quantities,'\n')
+        # add part
+        for part_id, part_qty in zip(part_ids, part_quantities):
+            print(part_id, part_qty)
+            if int(part_qty) == 0:
+                continue
+            # check
+            query = "SELECT * FROM job_part WHERE job_id = %s AND part_id = %s"
+            cursor = getCursor()
+            cursor.execute(query, (job_id, part_id))
+            result = cursor.fetchone()
+
+            if result:
+                # update
+                update_query = "UPDATE job_part SET qty = %s WHERE job_id = %s AND part_id = %s"
+                cursor.execute(update_query, (part_qty, job_id, part_id))
+            else:
+                # insert
+                insert_query = "INSERT INTO job_part (job_id, part_id, qty) VALUES (%s, %s, %s)"
+                cursor.execute(insert_query, (job_id, part_id, part_qty))
+
+            cursor.close()
+        # add service
+        for service_id, service_qty in zip(service_ids, service_quantities):
+            print(service_id, service_qty,type(service_qty))
+            if int(service_qty) == 0:
+                continue
+            # check
+            query = "SELECT * FROM job_service WHERE job_id = %s AND service_id = %s"
+            cursor = getCursor()
+            cursor.execute(query, (job_id, service_id))
+            result = cursor.fetchone()
+
+            if result:
+                # update
+                update_query = "UPDATE job_service SET qty = %s WHERE job_id = %s AND service_id = %s"
+                cursor.execute(update_query, (service_qty, job_id, service_id))
+            else:
+                # insert
+                insert_query = "INSERT INTO job_service (job_id, service_id, qty) VALUES (%s, %s, %s)"
+                cursor.execute(insert_query, (job_id, service_id, service_qty))
+
+            cursor.close()
+        return redirect('/currentjobs')
+    if request.method == 'GET':
+        return render_template('job.html', job_id=job_id, services=service_results, parts=part_results)
+
+@app.route('/complete_job/<int:job_id>')
+def complete_job(job_id):
+    # mark completed
+    cursor = getCursor()
+    update_query = "UPDATE job SET completed = 1 WHERE job_id = %s"
+    cursor.execute(update_query, (job_id,))
+    cursor.close()
+    # total cost is calculated
+    part_results, service_results = search_part_service(job_id)
+    cost = 0
+    for part in part_results:
+        print(part)
+        cost+=part['cost'] *part['qty']
+    for service in service_results:
+        print(service)
+        cost+=service['cost'] *service['qty']
+    print(cost)
+    cursor = getCursor()
+    update_query = "UPDATE job SET total_cost = %s WHERE job_id = %s"
+    cursor.execute(update_query, (cost, job_id,))
+    cursor.close()
+    return redirect(url_for('currentjobs'))
 
 
 @app.route("/administrator")
@@ -142,7 +262,7 @@ def create_job(customer_id):
 
 
 @app.route("/administrator/service")
-def service(per_page=5):
+def service(per_page=10):
     page = int(request.args.get('page', 1))
     search_value = request.args.get('search', '').strip()
 
@@ -249,9 +369,25 @@ def add_part():
 
     return render_template('addpart.html')
 
+
 @app.route("/administrator/unpaidbills")
 def unpaidbills():
+    cursor = getCursor()
+    query = """
+            SELECT j.job_id, IFNULL(CONCAT(c.first_name, ' ', c.family_name), c.family_name) AS full_name, j.job_date
+            FROM job j
+            INNER JOIN customer c ON j.customer = c.customer_id
+            WHERE j.completed = 1
+        """
     return render_template("unpaidbills.html")
+
+
+@app.route('/administrator/unpaidbills/filter_bills', methods=['POST'])
+def filter_bills():
+    selected_customer = request.form['customer']
+    filtered_bills = [bill for bill in unpaid_bills if bill[1] == selected_customer]
+    return render_template('index.html', unpaid_bills=filtered_bills)
+
 
 @app.route("/administrator/billinghistory")
 def billinghistory():

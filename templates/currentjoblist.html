@@ -16,27 +16,34 @@
     .table-container {
     max-width: 1200px;
     margin: 0 auto;
+    margin-top: 20px;
     }
-
-
 </style>
 <div class="table-container">
     <h2>Current Job List</h2>
     <hr>
-    <!-- code to display list of jobs-->
     <table class="table">
+        <thead>
         <tr>
             <th>Job ID</th>
             <th>Customer Name</th>
             <th>Date</th>
+            <th>Actions</th>
         </tr>
-        {% for job in job_list %}
+        </thead>
+        <tbody>
+        {% for result in results %}
         <tr>
-            {% for field in job %}
-            <td>{{field}}</td>
-            {% endfor %}
+            <td>{{ result.job_id }}</td>
+            <td>{{ result.full_name }}</td>
+            <td>{{ result.job_date }}</td>
+            <td>
+                <a href="{{ url_for('job', job_id=result.job_id) }}" class="btn btn-primary">Edit</a>
+                <a href="{{ url_for('complete_job', job_id=result.job_id) }}" class="btn btn-success">Complete</a>
+            </td>
         </tr>
         {% endfor %}
+        </tbody>
     </table>
 </div>
 {% endblock %}
