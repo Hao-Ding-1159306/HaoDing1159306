@@ -372,21 +372,35 @@ def add_part():
 
 @app.route("/administrator/unpaidbills")
 def unpaidbills():
+    customer_value = request.args.get('customer', '').strip()
+    print("\ncustomer_value:",customer_value)
     cursor = getCursor()
     query = """
-            SELECT j.job_id, IFNULL(CONCAT(c.first_name, ' ', c.family_name), c.family_name) AS full_name, j.job_date
+            SELECT j.job_id, IFNULL(CONCAT(c.first_name, ' ', c.family_name), c.family_name) AS full_name, j.job_date, j.total_cost
             FROM job j
             INNER JOIN customer c ON j.customer = c.customer_id
-            WHERE j.completed = 1
+            WHERE j.completed = 1 AND j.paid = 0
+            ORDER BY job_date, full_name;
         """
-    return render_template("unpaidbills.html")
+    cursor.execute(query)
+    results = cursor.fetchall()
+    results = [{'job_id': row[0], 'full_name': row[1], 'job_date': row[2], 'total_cost': row[3]} for row in results]
+    cursor.close()
+    full_names = [result['full_name'] for result in results]
+    full_names = list(set(full_names))
+    if len(customer_value) !=0:
+        results = [result for result in results if result['full_name'] == customer_value]
+    return render_template("unpaidbills.html", unpaid_bills=results,full_names=full_names)
 
 
-@app.route('/administrator/unpaidbills/filter_bills', methods=['POST'])
-def filter_bills():
-    selected_customer = request.form['customer']
-    filtered_bills = [bill for bill in unpaid_bills if bill[1] == selected_customer]
-    return render_template('index.html', unpaid_bills=filtered_bills)
+@app.route('/administrator/pay_job/<int:job_id>')
+def pay_job(job_id):
+    cursor = getCursor()
+    update_query = "UPDATE job SET paid = 1 WHERE job_id = %s"
+    cursor.execute(update_query, (job_id,))
+    cursor.close()
+    return redirect(url_for('unpaidbills'))
+
 
 
 @app.route("/administrator/billinghistory")

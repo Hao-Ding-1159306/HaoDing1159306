@@ -19,19 +19,19 @@
 
 <div class="container">
     <h2>Unpaid Bills</h2>
-    <hr>
-    <form action="/administrator/unpaidbills/filter_bills" method="POST">
+
+    <form action="/administrator/unpaidbills" method="GET">
         <div class="row search-container">
             <div class="col-md-6">
-            <div class="form-group">
-                <select class="form-control" name="customer">
-                    <option value="">All Customers</option>
-                    <option value="Customer 1">Customer 1</option>
-                    <option value="Customer 2">Customer 2</option>
-                    <option value="Customer 3">Customer 3</option>
-                    <!-- Add more options as needed -->
-                </select>
-            </div>
+                <div class="form-group">
+                    <select class="form-control" name="customer">
+                        <option value="">All Customers</option>
+                        {% for full_name in full_names %}
+                        <option value="{{ full_name }}">{{ full_name }}</option>
+                        /td>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <div class="col-md-6">
                 <button type="submit" class="btn btn-primary">Filter</button>
@@ -39,11 +39,12 @@
         </div>
     </form>
 
+
     <div class="table-container">
         <table class="table table-striped">
             <thead>
             <tr>
-                <th>Bill ID</th>
+                <th>Job ID</th>
                 <th>Customer</th>
                 <th>Job Date</th>
                 <th>Cost</th>
@@ -53,14 +54,13 @@
             <tbody>
             {% for bill in unpaid_bills %}
             <tr>
-                <td>{{ bill[0] }}</td>
-                <td>{{ bill[1] }}</td>
-                <td>{{ bill[2] }}</td>
-                <td>{{ bill[3] }}</td>
+                <td>{{ bill.job_id }}</td>
+                <td>{{ bill.full_name }}</td>
+                <td>{{ bill.job_date }}</td>
+                <td>{{ bill.total_cost }}</td>
                 <td>
                     <form action="/mark_paid" method="POST">
-                        <input type="hidden" name="bill_id" value="{{ bill[0] }}">
-                        <button type="submit" class="btn btn-primary">Mark Paid</button>
+                        <a href="{{ url_for('pay_job', job_id=bill.job_id) }}" class="btn btn-success">Mark Paid</a>
                     </form>
                 </td>
             </tr>
