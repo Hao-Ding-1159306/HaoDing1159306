@@ -1,2 +1,63 @@
 {% extends "administrator.html" %}
 {% block title %}Billing History{% endblock %}
+
+{% block content %}
+
+<style>
+    table {
+        margin: 0 auto;
+        max-width: 1200px;
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .overdue {
+        background-color: #ffcccc;
+    }
+    h3 {
+        margin: 0 auto;
+        max-width: 1200px;
+        margin-top: 20px;
+    }
+    h2 {
+        margin: 0 auto;
+        max-width: 1200px;
+        margin-top: 20px;
+    }
+</style>
+<h2>Billing History</h2>
+<hr>
+
+
+{% for customer, bills in grouped_bills.items() %}
+<div>
+    <h3>{{ bills[0].full_name }}</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Job Date</th>
+                <th>Total Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bill in bills %}
+            <tr class="{% if bill.overdue %}overdue{% endif %}">
+                <td>{{ bill.job_date }}</td>
+                <td>{{ bill.total_cost }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+
+
+{% endblock %}

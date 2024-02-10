@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import mysql.connector
 from flask import Flask, redirect, render_template, request, url_for
@@ -39,9 +39,132 @@ def currentjobs():
         WHERE j.completed = 0
     """
     cursor.execute(query)
-    jobList = cursor.fetchall()
+    results = cursor.fetchall()
+    results = [{'job_id': row[0], 'full_name': row[1], 'job_date': row[2]} for row in results]
+    print(results)
     cursor.close()
-    return render_template("currentjoblist.html", job_list=jobList)
+    return render_template("currentjoblist.html", results=results)
+
+
+def search_part_service(job_id):
+    part_query = """
+                        SELECT 
+                            p.part_id,
+                            p.part_name,
+                            p.cost,
+                            COALESCE(jp.qty, 0) AS qty
+                        FROM
+                            part p
+                        LEFT JOIN
+                            job_part jp ON p.part_id = jp.part_id AND jp.job_id = %s;
+                     """
+    cursor = getCursor()
+    cursor.execute(part_query, (job_id,))
+    part_results = cursor.fetchall()
+    cursor.close()
+    print('part_results', part_results)
+    part_results = [{'part_id': row[0], 'part_name': row[1], 'cost': row[2], 'qty': row[3]} for row in part_results]
+
+    service_query = """
+                            SELECT 
+                                s.service_id,
+                                s.service_name,
+                                s.cost,
+                                COALESCE(js.qty, 0) AS qty
+                            FROM
+                                service s
+                            LEFT JOIN
+                                job_service js ON s.service_id = js.service_id AND js.job_id = %s;
+                        """
+    cursor = getCursor()
+    cursor.execute(service_query, (job_id,))
+    service_results = cursor.fetchall()
+    cursor.close()
+    print('service_results', service_results)
+    service_results = [{'service_id': row[0], 'service_name': row[1], 'cost': row[2], 'qty': row[3]} for row in
+                       service_results]
+
+    return part_results, service_results
+
+
+@app.route('/job/<int:job_id>', methods=['GET', 'POST'])
+def job(job_id):
+    part_results, service_results = search_part_service(job_id)
+    if request.method == 'POST':
+        part_ids = request.form.getlist('part_id[]')
+        part_quantities = request.form.getlist('part_qty[]')
+        service_ids = request.form.getlist('service_id[]')
+        service_quantities = request.form.getlist('service_qty[]')
+        print('\n', part_ids, part_quantities, service_ids, service_quantities, '\n')
+        # add part
+        for part_id, part_qty in zip(part_ids, part_quantities):
+            print(part_id, part_qty)
+            if int(part_qty) == 0:
+                continue
+            # check
+            query = "SELECT * FROM job_part WHERE job_id = %s AND part_id = %s"
+            cursor = getCursor()
+            cursor.execute(query, (job_id, part_id))
+            result = cursor.fetchone()
+
+            if result:
+                # update
+                update_query = "UPDATE job_part SET qty = %s WHERE job_id = %s AND part_id = %s"
+                cursor.execute(update_query, (part_qty, job_id, part_id))
+            else:
+                # insert
+                insert_query = "INSERT INTO job_part (job_id, part_id, qty) VALUES (%s, %s, %s)"
+                cursor.execute(insert_query, (job_id, part_id, part_qty))
+
+            cursor.close()
+        # add service
+        for service_id, service_qty in zip(service_ids, service_quantities):
+            print(service_id, service_qty, type(service_qty))
+            if int(service_qty) == 0:
+                continue
+            # check
+            query = "SELECT * FROM job_service WHERE job_id = %s AND service_id = %s"
+            cursor = getCursor()
+            cursor.execute(query, (job_id, service_id))
+            result = cursor.fetchone()
+
+            if result:
+                # update
+                update_query = "UPDATE job_service SET qty = %s WHERE job_id = %s AND service_id = %s"
+                cursor.execute(update_query, (service_qty, job_id, service_id))
+            else:
+                # insert
+                insert_query = "INSERT INTO job_service (job_id, service_id, qty) VALUES (%s, %s, %s)"
+                cursor.execute(insert_query, (job_id, service_id, service_qty))
+
+            cursor.close()
+        return redirect('/currentjobs')
+    if request.method == 'GET':
+        return render_template('job.html', job_id=job_id, services=service_results, parts=part_results)
+
+
+@app.route('/complete_job/<int:job_id>')
+def complete_job(job_id):
+    # mark completed
+    cursor = getCursor()
+    update_query = "UPDATE job SET completed = 1 WHERE job_id = %s"
+    cursor.execute(update_query, (job_id,))
+    cursor.close()
+    # total cost is calculated
+    part_results, service_results = search_part_service(job_id)
+    cost = 0
+    for part in part_results:
+        print(part)
+        cost += part['cost'] * part['qty']
+    for service in service_results:
+        print(service)
+        cost += service['cost'] * service['qty']
+    print(cost)
+    cursor = getCursor()
+    update_query = "UPDATE job SET total_cost = %s WHERE job_id = %s"
+    cursor.execute(update_query, (cost, job_id,))
+    cursor.close()
+    return redirect(url_for('currentjobs'))
 
 
 @app.route("/administrator")
@@ -142,7 +265,7 @@ def create_job(customer_id):
 
 
 @app.route("/administrator/service")
-def service(per_page=5):
+def service(per_page=10):
     page = int(request.args.get('page', 1))
     search_value = request.args.get('search', '').strip()
 
@@ -249,13 +372,78 @@ def add_part():
 
     return render_template('addpart.html')
 
+
 @app.route("/administrator/unpaidbills")
 def unpaidbills():
-    return render_template("unpaidbills.html")
+    customer_value = request.args.get('customer', '').strip()
+    print("\ncustomer_value:", customer_value)
+    cursor = getCursor()
+    query = """
+            SELECT j.job_id, IFNULL(CONCAT(c.first_name, ' ', c.family_name), c.family_name) AS full_name, j.job_date, j.total_cost
+            FROM job j
+            INNER JOIN customer c ON j.customer = c.customer_id
+            WHERE j.completed = 1 AND j.paid = 0
+            ORDER BY job_date, full_name;
+        """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    results = [{'job_id': row[0], 'full_name': row[1], 'job_date': row[2], 'total_cost': row[3]} for row in results]
+    cursor.close()
+    full_names = [result['full_name'] for result in results]
+    full_names = list(set(full_names))
+    if len(customer_value) != 0:
+        results = [result for result in results if result['full_name'] == customer_value]
+    return render_template("unpaidbills.html", unpaid_bills=results, full_names=full_names)
+
+
+@app.route('/administrator/pay_job/<int:job_id>')
+def pay_job(job_id):
+    cursor = getCursor()
+    update_query = "UPDATE job SET paid = 1 WHERE job_id = %s"
+    cursor.execute(update_query, (job_id,))
+    cursor.close()
+    return redirect(url_for('unpaidbills'))
+
 
 @app.route("/administrator/billinghistory")
 def billinghistory():
-    return render_template("billinghistory.html")
+    cursor = getCursor()
+    query = """
+                SELECT j.job_id, j.job_date, j.total_cost, j.paid, c.customer_id, c.family_name, c.first_name
+                FROM job j
+                INNER JOIN customer c ON j.customer = c.customer_id
+                WHERE j.completed = 1
+                ORDER BY family_name, first_name,job_date;
+            """
+    cursor.execute(query)
+    results = cursor.fetchall()
+    print(results)
+
+    grouped_bills = dict()
+    today = datetime.today().date()
+    for result in results:
+        if result[6] is None:
+            full_name = result[5]
+        else:
+            print()
+            full_name = ' '.join([result[5], result[6]])
+        date_format = "%Y-%m-%d"
+        # job_date = datetime.strptime(result[1], date_format).date()
+        difference = today - result[1]
+
+        # 检查差值是否大于等于14天
+        if difference >= timedelta(days=14) and result[3] == 0:
+            overdue = 1
+        else:
+            overdue = 0
+        little_dict = {'customer_id': result[4], 'full_name': full_name, 'job_id': result[0], 'job_date': result[1],
+                       'total_cost': result[2],'paid':result[3], 'overdue':overdue}
+        if result[4] in grouped_bills.keys():
+            grouped_bills[result[4]].append(little_dict)
+        else:
+            grouped_bills[result[4]] = [little_dict]
+    print('grouped_bills', grouped_bills)
+    return render_template("billinghistory.html",grouped_bills=grouped_bills)
 
 
 if __name__ == '__main__':

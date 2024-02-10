@@ -2,7 +2,81 @@
 
 ## Web application structure
 
+### 1.Technician
+
+#### Current Job
+
+The Current Job page not only contains all the information about the current job, but also needs to add two buttons to
+each line, "Edit" and "Complete"
+
+"Edit" will jump a page named "Job Details" to edit all parts and services
+
+"Complete" will mark the job has finished, than change the completed in table job
+
+#### Job Details
+
+This a page for add parts or services for the job. After confirming the addition of the item, modify the corresponding
+table job_service and job_part. It will also return to the "Current Job" page
+
+### 2.Admin
+
+#### Customer List
+
+This page contains a search bar, customer details, an "Add Customer" button, and an "Add Job" button for each customer
+
+Search bar terms is used for filter customers
+
+The "Add Customer" button is used to add new customer. It will jump to a new page to enter customer details. After
+confirmation, a new piece of data will be inserted into the customer table.
+
+The "Add Job" button is used to add jobs to customer. It will jump to a new page to select the job date. After
+confirmation, a new piece of data will be inserted into the job table.
+
+#### Service List
+
+This page contains a search bar, service details and an add "Add Service" button
+
+Search bar terms is used for filter service
+
+The "Add Service" button is used to add a new service. It will jump to a new page to enter service details. After
+confirmation, a new piece of data will be inserted into the service table.
+
+#### Part List
+
+This page contains a search bar, part details and an add "Add Part" button
+
+Search bar terms is used for filter part
+
+The "Add Part" button is used to add a new part. It will jump to a new page to enter part details. After
+confirmation, a new piece of data will be inserted into the part table.
+
+#### Unpaid Bills List
+
+This page contains a filter bar, unpaid bill details and an add "Mark Paid" button
+
+filter bar terms is used for filter customer
+
+The "Mark Paid" button is used to mark the bill paid, than change the paid in table job
+
+#### Bill History List
+
+This page searches for all completed bills in the job and groups them according to customer information. In addition, it
+also filters out long-term unpaid orders and marks them. Finally, it displays all historical orders based on the
+processed information.
+
 ## Design decisions
+
+- Since Admin needs a common navigation bar, I inherited base.html and wrote administrator.html as a template file for
+  most pages that Admin needs to operate.
+- Most of the add and edit buttons open a new page for entering or confirming information. On this new page, there are
+  usually two buttons: Cancel and Add, which are used for regret and confirmation respectively. After clicking, it will
+  return to the original page to continue the operation and confirm the modified information.
+- I use a lot of GET or POST to request and send data. For example, on the customer page, I not only need to send search
+  terms to filter customers, but also accept filtered information for display.
+- I try to minimize the use of if statements and other statements in html pages. The front end only displays the
+  information sent by the back end and sends the filled in information to the back end. All additions, deletions,
+  modifications and other logical processing related to the database are completed in the backend (app.py). Try to
+  ensure the separation of front and back ends
 
 ## Database questions
 
